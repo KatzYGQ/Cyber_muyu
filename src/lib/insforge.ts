@@ -6,8 +6,8 @@
  * @see https://docs.insforge.dev/sdks/rest/database#execute-raw-sql-strict-mode
  */
 
-/** Read at runtime so Vercel serverless always sees current env. */
-function getBaseUrl(): string {
+/** Read at runtime so Vercel serverless always sees current env. Exported for API routes. */
+export function getBaseUrl(): string {
   const url =
     process.env.INSFORGE_URL ??
     process.env.NEXT_PUBLIC_SUPABASE_URL;
