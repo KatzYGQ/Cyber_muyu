@@ -1,22 +1,39 @@
 /**
  * InsForge backend: uses Raw SQL API (same as MCP run-raw-sql).
- * Env: NEXT_PUBLIC_SUPABASE_URL (e.g. https://firstvibe.zeabur.app), SUPABASE_SERVICE_ROLE_KEY (API Key).
+ * Env: INSFORGE_URL (e.g. https://firstvibe.zeabur.app) or NEXT_PUBLIC_SUPABASE_URL,
+ *      SUPABASE_SERVICE_ROLE_KEY (API Key).
+ * Server-only INSFORGE_URL is read at runtime in API routes; no build-time dependency.
  * @see https://docs.insforge.dev/sdks/rest/database#execute-raw-sql-strict-mode
  */
 
-const baseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL?.replace(/\/$/, "");
-const apiKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+/** Read at runtime so Vercel serverless always sees current env. */
+function getBaseUrl(): string {
+  const url =
+    process.env.INSFORGE_URL ??
+    process.env.NEXT_PUBLIC_SUPABASE_URL;
+  return url?.replace(/\/$/, "") ?? "";
+}
 
-/** Use InsForge when we have URL+key and URL is NOT Supabase (so zeabur/insforge or any other). */
+function getApiKey(): string {
+  return (
+    process.env.SUPABASE_SERVICE_ROLE_KEY ??
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ??
+    ""
+  );
+}
+
+/** Use InsForge when we have URL+key and URL is NOT Supabase. */
 function isInsforgeUrl(): boolean {
+  const baseUrl = getBaseUrl();
+  const apiKey = getApiKey();
   if (!baseUrl || !apiKey) return false;
-  if (baseUrl.includes("supabase.co")) return false; // real Supabase → use Supabase client
-  return true; // firstvibe.zeabur.app or any non-Supabase URL → use InsForge
+  if (baseUrl.includes("supabase.co")) return false;
+  return true;
 }
 
 function headers(): HeadersInit {
   return {
-    Authorization: `Bearer ${apiKey}`,
+    Authorization: `Bearer ${getApiKey()}`,
     Accept: "application/json",
     "Content-Type": "application/json",
   };
@@ -29,6 +46,7 @@ interface RawSqlResponse {
 }
 
 async function rawSql(query: string, params?: unknown[]): Promise<RawSqlResponse> {
+  const baseUrl = getBaseUrl();
   const res = await fetch(`${baseUrl}/api/database/advance/rawsql`, {
     method: "POST",
     headers: headers(),
